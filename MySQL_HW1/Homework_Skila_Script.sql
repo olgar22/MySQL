@@ -90,3 +90,79 @@ SELECT film.title, COUNT(film_actor.actor_id)
 SELECT film.title, COUNT(film.title)
 		FROM film
 		WHERE film.title='Hunchback Impossible';
+        
+-- 6e. Using the tables payment and customer and the JOIN command, list the total paid by each customer. 
+-- List the customers alphabetically by last name:
+use sakila;
+select customer.last_name, customer.first_name, sum(payment.amount) as 'Total Payment'
+	from  payment
+    inner join customer on customer.customer_id = payment.customer_id
+        group by payment.customer_id
+        order by customer.last_name    ;
+-- 7a. The music of Queen and Kris Kristofferson have seen an unlikely resurgence. As an unintended consequence, films starting with the letters K and Q have also soared in popularity. Use subqueries to display the titles of movies starting with the letters K and Q whose language is English.
+select film.title from film
+where film.title like'K%' or film.title like 'Q%' 
+and film.language_id in
+(select  language_id from language
+where name = "English");
+-- 7b. Use subqueries to display all actors who appear in the film Alone Trip.
+select last_name, first_name
+	from actor
+    where actor_id IN
+(SELECT actor_id
+    FROM film_actor
+    WHERE film_id IN
+(SELECT film_id
+     FROM film
+     WHERE title = 'Alone Trip'
+   ) );
+-- 7c. You want to run an email marketing campaign in Canada, for which you will need the names and email addresses of all Canadian customers. Use joins to retrieve this information.
+select first_name, last_name, email from customer where address_id in
+(select distinct address_id from address where city_id in
+(select distinct city_id from city where country_id in
+(select distinct country_id from country where country = 'Canada')) )  ;
+-- 7d. Sales have been lagging among young families, and you wish to target all family movies for a promotion. Identify all movies categorized as family films.
+select title from film where film_id in
+(select film_id from film_category where category_id in
+(select category_id  from category where name ='Family'));
+-- 7e. Display the most frequently rented movies in descending order.
+select film.title as 'Title' , count(rental.rental_date) as 'Count' from rental, inventory, film
+where rental.inventory_id = inventory.inventory_id and inventory.film_id = film.film_id
+group by film.film_id
+order by Count desc ;
+-- 7f. Write a query to display how much business, in dollars, each store brought in.
+select sum(amount), inventory.store_id from inventory, rental, payment
+where inventory.inventory_id =rental.inventory_id and rental.customer_id = payment.customer_id  
+group by inventory.store_id;
+-- 7g. Write a query to display for each store its store ID, city, and country.
+select store.store_id, city.city, country.country 
+	from store, city, country, address
+    where store.address_id = address.address_id 
+    and address.city_id = city.city_id
+    and city.country_id = country.country_id;
+-- 7h. List the top five genres in gross revenue in descending order. (Hint: you may need to use the following tables:
+--  category, film_category, inventory, payment, and rental.)
+select sum(payment.amount) as 'Amount', category.name 
+	from category, film_category, inventory, payment, rental
+	where category.category_id = film_category.category_id 
+	and film_category.film_id = inventory.film_id
+	and inventory.inventory_id = rental.inventory_id
+	and rental.rental_id = payment.rental_id
+	group by category.category_id
+	order by Amount desc
+	limit 5;
+-- 8a. In your new role as an executive, you would like to have an easy way of viewing the Top five genres by gross revenue. Use the solution from the problem above to create a view. If you haven't solved 7h, you can substitute another query to create a view.
+CREATE VIEW V_top_five_genres AS 
+	select sum(payment.amount) as 'Amount', category.name 
+		from category, film_category, inventory, payment, rental
+		where category.category_id = film_category.category_id 
+		and film_category.film_id = inventory.film_id
+		and inventory.inventory_id = rental.inventory_id
+		and rental.rental_id = payment.rental_id
+		group by category.category_id
+		order by Amount desc
+		limit 5;
+-- 8b. How would you display the view that you created in 8a?
+select * from V_top_five_genres;
+-- 8c. You find that you no longer need the view top_five_genres. Write a query to delete it.
+drop view V_top_five_genres;
